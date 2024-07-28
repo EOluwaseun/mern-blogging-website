@@ -30,7 +30,7 @@ const BlogEditor = () => {
     setTextEditor,
   } = useContext(EditorContext);
 
-  // console.log(blogState);
+  console.log(blogState);
 
   useEffect(() => {
     //if textEditor is ready, set textEditor state
@@ -40,7 +40,9 @@ const BlogEditor = () => {
         new EditorJS({
           // set some value
           holderId: 'textEditor',
-          data: content,
+          // data: content, this give editor to be use without any data in it
+          data: Array.isArray(content) ? content[0] : content, //check it the data in is an Array
+          //being array means i have written somthing in it b4 and i want to get d data
           tools: tools,
           placeholder: 'Write blog',
         })
@@ -127,7 +129,7 @@ const BlogEditor = () => {
     // if (!banner.length) {
     //   return toast.error('upload a blog banner to publish');
     // }
-    if (!title.length) {
+    if (!title?.length) {
       return toast.error('Write blog title to publish');
     }
     //  check if text editor is ready
@@ -152,7 +154,7 @@ const BlogEditor = () => {
     }
     // console.log('hey');
 
-    if (!title.length) {
+    if (!title?.length) {
       return toast.error('Write blog title before saving it as a draft');
     }
 
@@ -221,7 +223,7 @@ const BlogEditor = () => {
         </Link>
         {/* line clapm wont break the word, it will only add 3 dots if the world will overflow */}
         <p className="max-md:hidden text-black line-clamp-1 w-full">
-          {title ? title : 'New Blog'}
+          {blogState?.title ? blogState?.title : 'New Blog'}
         </p>
         <div className="flex gap-4 ml-auto">
           <button className="btn-dark py-2" onClick={handlePublish}>
@@ -260,7 +262,7 @@ const BlogEditor = () => {
               </label>
             </div>
             <textarea
-              defaultValue={title}
+              defaultValue={blogState?.title}
               placeholder="Blog Title"
               className="text-4xl font-medium w-full h-20 outline-none resize-none
               mt-10 leading-tight placeholder:opacity-40"
@@ -268,6 +270,7 @@ const BlogEditor = () => {
               onChange={handleTitleChange}
             ></textarea>
             <hr className="w-full opacity-10 my-5" />
+
             {/* text editor */}
             <div id="textEditor" className="font-gelasio"></div>
           </div>

@@ -1,12 +1,15 @@
 import { useContext, useState } from 'react';
 import logo from '../imgs/logo.png';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { UserContext } from '../App';
 import UserNavigationPanel from './user-navigation.component';
 
 const Navbar = () => {
   const [searchBoxVisibility, setSearchBoxVisibility] = useState(false);
   const [userNavPanel, setUserNavPanel] = useState(false);
+
+  const navigate = useNavigate();
+
   const {
     userAuth,
     userAuth: { access_token, profile_img },
@@ -14,6 +17,17 @@ const Navbar = () => {
 
   const handleNavPanel = () => {
     setUserNavPanel((currentVal) => !currentVal);
+  };
+
+  const handleSearch = (e) => {
+    let query = e.target.value; //this is used to get d value from search whenever u write in the search input
+    // console.log(query);
+
+    if (e.keyCode === 13 && query.length) {
+      //this means if i press the Enter button and i have something in my search input
+      navigate(`/search/${query}`);
+      //navigate to search page and d whatever typed in d search box
+    }
   };
 
   const handleBlur = () => {
@@ -41,6 +55,7 @@ const Navbar = () => {
             type="text"
             placeholder="Search"
             className="w-full md:w-auto bg-grey p-4 pl-6 md:pl-12 pr-[12px] md:pr-[6px] rounded-full placeholder:text-dark-grey"
+            onKeyDown={handleSearch}
           />
           <i className="fi fi-rr-search absolute right-[10%] md:pointer-events-none md:left-5 top-1/2 -translate-y-1/2 text-xl text-dark-grey"></i>
         </div>
