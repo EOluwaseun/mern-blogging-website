@@ -8,7 +8,7 @@ import { nanoid } from 'nanoid';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
 import admin from 'firebase-admin';
-import serviceAccountKey from './blog-yt-7f130-firebase-adminsdk-u6n9o-bf7ee70fef.json' assert { type: 'json' };
+import serviceAccountKey from './firebase_file.json' assert { type: 'json' };
 
 import {
   uploadPhoto,
@@ -256,6 +256,191 @@ server.post(
   }
 );
 
+// get blog from the database
+
+server.post('/latest-blogs', (req, res) => {
+  //page is 1 by default
+  let { page } = req.body;
+  let maxLimit = 5;
+
+  //find all blogs,excluding the ones that is draft
+  Blog.find({ draft: false })
+    //populate will get the author, NB: author is assign the User ID in the blog Model
+    //then i can now select whatever field i want in the USER model through the user Id
+    .populate(
+      'author',
+      'personal_info.profile_img personal_info.username personal_info.fullname -_id'
+      //geting profile image, username, and fullname from the User Model, using the ID author
+      // _id will make sure id is not selected
+    )
+    .sort({ publishedAt: -1 })
+    //sort the blog using PublishAt basis
+    //-1 means give me d recent one first
+    .select('blog_id title des banner activity tags publishedAt -_id')
+    //select allows me pull only the information i need from the Blog, instead of pulling everythin at a go
+    .skip((page - 1) * maxLimit)
+    /*page is 1 by default, so 1 - 1 = 0, multiply by maxlimit(5)... this will give my 5 documents first*/
+    //this calculate d skip document
+    .limit(maxLimit)
+    //limit allows me to limit my result in order not to get all the data at once
+    .then((blogs) => {
+      return res.status(200).json({ blogs });
+      //this returns all the blogs structure
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
+  //after mongoose is done running all these, it then pass the result
+});
+
+//this is  where i making request
+server.post('/all-latest-blog-count', (req, res) => {
+  //countDocument in moogoose let u run count query in d mongodb
+  //i used same basis, only count published blog
+  Blog.countDocuments({ draft: false })
+    .then((count) => {
+      return res.status(200).json({ totalDocs: count });
+      //count from the data base count method is passed to the totalDocs
+    })
+    .catch((err) => {
+      console.log(err.message);
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+server.get('/trending-blogs', (req, res) => {
+  // sorting blog by read count, like count
+  Blog.find({ draft: false })
+    .populate(
+      'author',
+      'personal_info.profile_img personal_info.username personal_info.fullname -_id'
+      //geting profile image, username, and fullname from the User Model, using the ID author
+      // _id will make sure id is not selected
+    )
+    .sort({
+      'activity.total_read': -1,
+      'activity.total_likes': -1,
+      publishedAt: -1,
+    })
+    //sort the data by activity of total read
+    //-1 means to get d lagest value before going to the smallest value for total read
+    //-1 means to get d lagest value before going to the smallest value for most liked
+    //-1 means to get d latest blog
+    //we sorted base on this criteria
+    .select('blog_id title publishedAt _id')
+    .limit(5)
+    .then((blogs) => {
+      return res.status(200).json({ blogs });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+//search
+server.post('/search-blogs', (req, res) => {
+  // this means i want to filter d blog acording to the tag
+  let { tag, query, page, author, limit, eliminate_blog } = req.body; //destructure page too
+  //after getiing d tag from d body
+  let findQuery;
+  //tags array is from d database, tag is from the client. if d value is equal
+  //also find d ones that's not draft
+
+  if (tag) {
+    //this means, if we have tag from d frontend, give me tag. otherwise dont find query
+    findQuery = { tags: tag, draft: false, blog_id: { $ne: eliminate_blog } };
+    // blog_id:{$ne:eliminate_blog}}; it will remove d current blog if it equals to
+  } else if (query) {
+    // if is query we have from d frontend
+    findQuery = { draft: false, title: new RegExp(query, 'i') }; //This let d user search using title
+    //lets say i have 'HOW TO CODE IN JS' -> if you searcg CODE , it will still bring blog related to code
+    //this allows searching easy
+    //inMogoose you have use the key you want to use, here we use Title and also create a new regex pattern -> new RegExp(qeury, i)
+    //the query means, the query you want to check, i means it incase sensitive
+  } else if (author) {
+    findQuery = { author, draft: false };
+  }
+
+  let maxLimit = limit ? limit : 2; // how many blogs i want
+
+  Blog.find(findQuery) //use find to findquery
+    .populate(
+      'author',
+      'personal_info.profile_img personal_info.username personal_info.fullname -_id'
+    )
+    .sort({ publishedAt: -1 })
+    .select('blog_id title des banner activity tags publishedAt -_id')
+    .skip((page - 1) * maxLimit)
+    .limit(maxLimit)
+    .then((blogs) => {
+      return res.status(200).json({ blogs });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+server.post('/search-blogs-count', (req, res) => {
+  let { tag, query, author } = req.body; //destruture d tag from the body
+
+  let findQuery;
+
+  if (tag) {
+    //this means, if we have tag from d frontend, give me tag. otherwise dont find query
+    findQuery = { tags: tag, draft: false };
+  } else if (query) {
+    // if is query we have from d frontend
+    findQuery = { draft: false, title: new RegExp(query, 'i') }; //This let d user search using title
+    //lets say i have 'HOW TO CODE IN JS' -> if you searcg CODE , it will still bring blog related to code
+    //this allows searching easy
+    //inMogoose you have use the key you want to use, here we use Title and also create a new regex pattern -> new RegExp(qeury, i)
+    //the query means, the query you want to check, i means it incase sensitive
+  } else if (author) {
+    findQuery = { author, draft: false };
+  }
+
+  Blog.countDocuments(findQuery)
+    .then((count) => {
+      return res.status(200).json({ totalDocs: count });
+      //count from the data base count method is passed to the totalDocs
+    })
+    .catch((err) => {
+      console.log(err.message);
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+// search user
+server.post('/search-users', (req, res) => {
+  let { query } = req.body;
+
+  User.find({ 'personal_info.username': new RegExp(query, 'i') }) //seacrh for query in User
+    .limit(50)
+    .select(
+      'personal_info.profile_img personal_info.username personal_info.fullname -_id'
+    ) //select keys u want in d document
+    .then((users) => {
+      return res.status(200).json({ users });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+// get profile
+server.post('/get-profile', (req, res) => {
+  let { username } = req.body;
+  User.findOne({ 'personal_info.username': username }) //findOne find a unique data in document and stop execution
+    .select('-personal_info.password -google_auth -updatedAt -blogs')
+    .then((user) => {
+      return res.status(200).json(user);
+    })
+    .catch((err) => {
+      console.log(err);
+      return res.status(500).json({ error: err.message });
+    });
+});
+
 //send form to the backend
 server.post('/create-blog', verifyJWT, (req, res) => {
   let authorId = req.user; // get user id
@@ -337,6 +522,59 @@ server.post('/create-blog', verifyJWT, (req, res) => {
             .status(500)
             .json({ error: 'Failed to update total post number' });
         });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+//get a single blog
+server.post('/get-blog', (req, res) => {
+  let { blog_id, draft, mode } = req.body; //destructuring blog_id from d frontend
+
+  let increamentVal = (mode = !'edit' ? 1 : 0);
+
+  Blog.findOneAndUpdate(
+    { blog_id },
+    { $inc: { 'activity.total_reads': increamentVal } }
+  )
+    //using findAndUpdate instead of findOne, it's bcos i want to update d likes, comment on the blog
+    //$inc this is increament sign in mongoose
+    //it's saying increament d total number of reads pataining to this blog by 1
+    .populate(
+      'author',
+      'personal_info.fullname personal_info.username personal_info.profile_img'
+    )
+    //populate get d author, and get the username and other information of the author
+    .select('title des content banner activity publishedAt blog_id tags')
+    //select title, des and so on of d blog
+    .then((blog) => {
+      //after getting d blog i want to update d reads  from d USER MODEL, thats d reason for populate
+      User.findOneAndUpdate({
+        'personal_info.username': blog.author.personal_info.username,
+        $inc: { 'account_info.total_reads': increamentVal },
+        //i updated the user's username, and also increament d reads
+      });
+      // .catch((err) => {
+      //   //catch is used incase i get an error while getting this information from USER MODEL
+      //   //so it wont stop my server
+      //   return res.status(500).json({ error: err.message });
+      // })
+      //BLOG is the result from d blogs
+      //AUTHOR is part of the result from BLOG
+      //AUTHOR is referencing to USER in the USERMODEL
+      // personal_info.username is coming from reference made to USERMODEL in d BLOGMODEL
+      // Note:this blog is used to penetrate to the author
+
+      if (blog.draft && !draft) {
+        //check if d blog is draft
+        //and if check if d blog is draft or not
+        return res
+          .status(500)
+          .json({ error: 'you can not access draft blogs' });
+      }
+
+      return res.status(200).json({ blog });
     })
     .catch((err) => {
       return res.status(500).json({ error: err.message });
