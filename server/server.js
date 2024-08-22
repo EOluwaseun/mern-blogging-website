@@ -8,7 +8,9 @@ import { nanoid } from 'nanoid';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
 import admin from 'firebase-admin';
-import serviceAccountKey from './firebase_file.json' assert { type: 'json' };
+// import serviceAccountKey from './firebase_file.json' assert { type: 'json' };
+// const serviceAccountKey = JSON.parse(process.env.SERVICE_ACCOUNT);
+const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT);
 
 import {
   uploadPhoto,
@@ -25,7 +27,7 @@ let PORT = 5000;
 
 // connect admin to firebase
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccountKey),
+  credential: admin.credential.cert(serviceAccount),
 });
 
 let emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // regex for email
