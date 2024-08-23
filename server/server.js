@@ -320,7 +320,7 @@ server.get('/trending-blogs', (req, res) => {
       // _id will make sure id is not selected
     )
     .sort({
-      'activity.total_read': -1,
+      'activity.total_reads': -1,
       'activity.total_likes': -1,
       publishedAt: -1,
     })
@@ -432,6 +432,7 @@ server.post('/search-users', (req, res) => {
 // get profile
 server.post('/get-profile', (req, res) => {
   let { username } = req.body;
+  //username is unique, so it will only find one and stop execution
   User.findOne({ 'personal_info.username': username }) //findOne find a unique data in document and stop execution
     .select('-personal_info.password -google_auth -updatedAt -blogs')
     .then((user) => {
@@ -534,7 +535,8 @@ server.post('/create-blog', verifyJWT, (req, res) => {
 server.post('/get-blog', (req, res) => {
   let { blog_id, draft, mode } = req.body; //destructuring blog_id from d frontend
 
-  let increamentVal = (mode = !'edit' ? 1 : 0);
+  let increamentVal = mode != 'edit' ? 1 : 0;
+  // if(mode != '')
 
   Blog.findOneAndUpdate(
     { blog_id },
@@ -552,11 +554,14 @@ server.post('/get-blog', (req, res) => {
     //select title, des and so on of d blog
     .then((blog) => {
       //after getting d blog i want to update d reads  from d USER MODEL, thats d reason for populate
-      User.findOneAndUpdate({
-        'personal_info.username': blog.author.personal_info.username,
-        $inc: { 'account_info.total_reads': increamentVal },
-        //i updated the user's username, and also increament d reads
-      });
+      User.findOneAndUpdate(
+        { 'personal_info.username': blog.author.personal_info.username },
+        { $inc: { 'account_info.total_reads': increamentVal } }
+        // {
+        //   $inc: { 'account_info.total_reads': increamentVal },
+        //   i updated the user's username, and also increament d reads
+        // }
+      );
       // .catch((err) => {
       //   //catch is used incase i get an error while getting this information from USER MODEL
       //   //so it wont stop my server
