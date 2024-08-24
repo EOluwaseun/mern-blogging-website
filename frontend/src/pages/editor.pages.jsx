@@ -51,6 +51,7 @@ const Editor = () => {
       })
       .catch((err) => {
         console.log(err);
+        blogState(null);
         setLoading(false);
       });
   };

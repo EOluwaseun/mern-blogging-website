@@ -4,6 +4,8 @@ import 'dotenv/config';
 import bycrpt from 'bcrypt';
 import User from './Schema/User.js';
 import Blog from './Schema/Blog.js';
+import Comment from './Schema/Comment.js';
+import Notification from './Schema/Notification.js';
 import { nanoid } from 'nanoid';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
@@ -447,7 +449,7 @@ server.post('/get-profile', (req, res) => {
 //send form to the backend
 server.post('/create-blog', verifyJWT, (req, res) => {
   let authorId = req.user; // get user id
-  let { title, des, banner, tags, content, draft } = req.body;
+  let { title, des, banner, tags, content, draft, id } = req.body;
   if (!title.length) {
     return res
       .status(403)
@@ -481,54 +483,69 @@ server.post('/create-blog', verifyJWT, (req, res) => {
   //convert tags to lowercase
   tags = tags.map((tag) => tag.toLowerCase());
   let blog_id =
+    id ||
     title
       .replace(/[^a-zA-Z0-9]/g, ' ')
       .replace(/\s+/g, '-')
       .trim() + nanoid();
 
-  let blog = new Blog({
-    title,
-    des,
-    banner,
-    content,
-    tags,
-    author: authorId,
-    blog_id,
-    draft: Boolean(draft),
-  });
-
-  blog
-    .save()
-    .then((blog) => {
-      let increaseVal = draft ? 0 : 1;
-
-      //$inc is used to increase value by 1,
-      //$push allows to value into blogs field, and i'm pushing blog ID
-
-      User.findOneAndUpdate(
-        { _id: authorId },
-        {
-          //increase total posts by 1
-          $inc: { 'account_info.total_posts': increaseVal },
-          //push blog_id into blogs array from User model
-          //blog actual _id not the generated _id
-          $push: { blogs: blog._id },
-        }
-      )
-        .then((user) => {
-          //find d user info, and once it is resolve. you get the user data
-          return res.status(200).json({ id: blog.blog_id });
-          //send back back the generated _id
-        })
-        .catch((err) => {
-          return res
-            .status(500)
-            .json({ error: 'Failed to update total post number' });
-        });
-    })
-    .catch((err) => {
-      return res.status(500).json({ error: err.message });
+  if (id) {
+    Blog.findOneAndUpdate(
+      { blog_id },
+      { title, des, banner, tags, content, draft: draft ? draft : false }
+    )
+      .then(() => {
+        return res.status(200).json({ id: blog_id });
+      })
+      .catch((err) => {
+        // return res.status(500).json({ error: err.message });
+        return res.status(500).json({ error: err.message });
+      });
+  } else {
+    let blog = new Blog({
+      title,
+      des,
+      banner,
+      content,
+      tags,
+      author: authorId,
+      blog_id,
+      draft: Boolean(draft),
     });
+
+    blog
+      .save()
+      .then((blog) => {
+        let increaseVal = draft ? 0 : 1;
+
+        //$inc is used to increase value by 1,
+        //$push allows to value into blogs field, and i'm pushing blog ID
+
+        User.findOneAndUpdate(
+          { _id: authorId },
+          {
+            //increase total posts by 1
+            $inc: { 'account_info.total_posts': increaseVal },
+            //push blog_id into blogs array from User model
+            //blog actual _id not the generated _id
+            $push: { blogs: blog._id },
+          }
+        )
+          .then((user) => {
+            //find d user info, and once it is resolve. you get the user data
+            return res.status(200).json({ id: blog.blog_id });
+            //send back back the generated _id
+          })
+          .catch((err) => {
+            return res
+              .status(500)
+              .json({ error: 'Failed to update total post number' });
+          });
+      })
+      .catch((err) => {
+        return res.status(500).json({ error: err.message });
+      });
+  }
 });
 
 //get a single blog
@@ -586,6 +603,118 @@ server.post('/get-blog', (req, res) => {
     .catch((err) => {
       return res.status(500).json({ error: err.message });
     });
+});
+
+// like by user
+
+server.post('/like-blog', verifyJWT, (req, res) => {
+  let user_id = req.user;
+
+  let { _id, isLikedByUser } = req.body;
+
+  let increamentVal = !isLikedByUser ? 1 : -1;
+
+  Blog.findOneAndUpdate(
+    { _id },
+    { $inc: { 'activity.total_likes': increamentVal } }
+  ).then((blog) => {
+    if (!isLikedByUser) {
+      let like = new Notification({
+        type: 'like',
+        blog: _id,
+        notification_for: blog.author,
+        user: user_id,
+      });
+
+      like.save().then((notification) => {
+        return res.status(200).json({ liked_by_user: true });
+      });
+    } else {
+      //delete notification if blog is unliked by d user
+      Notification.findOneAndDelete({ user: user_id, type: 'like', blog: _id })
+        .then((data) => {
+          return res.status(200).json({ liked_by_user: false });
+        })
+        .catch((err) => {
+          return res.status(500).json({ error: err.message });
+        });
+    }
+  });
+});
+
+server.post('/isliked-by-user', verifyJWT, (req, res) => {
+  let user_id = req.user;
+
+  let { _id } = req.body; // get d blog ID
+
+  Notification.exists({ user: user_id, type: 'like', blog: _id })
+    .then((result) => {
+      return res.status(200).json({ result });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
+  //check is there is notification for d liked blog in d document
+});
+
+server.post('/add-comment', verifyJWT, (req, res) => {
+  let user_id = req.user;
+
+  let { _id, comment, replying_to, blog_author } = req.body;
+
+  if (!comment.length) {
+    return res
+      .status(403)
+      .json({ error: 'Write something to leave a comment...' });
+  }
+
+  //create comment
+  let commentObj = new Comment({
+    blog_id: _id,
+    blog_author, //owner of the blog
+    comment,
+    commented_by: user_id, //this whole d key of d user who commented
+    // isReply
+  });
+
+  commentObj.save().then((commentFile) => {
+    // commentfile referencing to d data saved in d database
+    let { comment, commentedAt, children } = commentFile;
+
+    Blog.findOneAndUpdate(
+      { _id },
+      {
+        //push d coment id into d comment Array
+        $push: { comments: commentFile._id },
+        $inc: {
+          'activity.total_comments': 1,
+          'activity.total_parent_comments': 1,
+        },
+      }
+    ).then((blog) => {
+      console.log('New comment created');
+    });
+
+    let notification = {
+      type: 'comment',
+      blog: _id,
+      notification_for: blog_author,
+      user: user_id,
+      comment: commentFile._id,
+    };
+
+    new Notification(notification).save().then((notification) => {
+      console.log('new notification created');
+    });
+
+    return res.status(200).json({
+      comment,
+      commentedAt,
+      _id: commentFile._id,
+      user_id,
+      children,
+    });
+  });
 });
 
 server.listen(PORT, () => {

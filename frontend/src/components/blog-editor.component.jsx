@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import logo from '../imgs/logo.png';
 import AnimationWrapper from '../common/page-animation';
 import defaultBanner from '../imgs/banner.png';
@@ -11,14 +11,6 @@ import { tools } from './tools.component';
 import { UserContext } from '../App';
 
 const BlogEditor = () => {
-  let navigate = useNavigate();
-
-  //get access token from the userAuth
-
-  let {
-    userAuth: { access_token },
-  } = useContext(UserContext);
-
   // blog context
   //get blog, then destructure all of that from blog
   let {
@@ -30,7 +22,17 @@ const BlogEditor = () => {
     setTextEditor,
   } = useContext(EditorContext);
 
-  console.log(blogState);
+  //get access token from the userAuth
+
+  let {
+    userAuth: { access_token },
+  } = useContext(UserContext);
+
+  let { blog_id } = useParams();
+
+  let navigate = useNavigate();
+
+  // console.log(blogState);
 
   useEffect(() => {
     //if textEditor is ready, set textEditor state
@@ -126,9 +128,9 @@ const BlogEditor = () => {
   //publish
   const handlePublish = () => {
     //validate b4 publishi
-    // if (!banner.length) {
-    //   return toast.error('upload a blog banner to publish');
-    // }
+    if (!banner.length) {
+      return toast.error('upload a blog banner to publish');
+    }
     if (!title?.length) {
       return toast.error('Write blog title to publish');
     }
@@ -164,55 +166,53 @@ const BlogEditor = () => {
 
     if (textEditor.isReady) {
       //its getting content from textEditor direct
-      textEditor
-        .save()
-        .then((content) => {
-          //send the form to d server
+      textEditor.save().then((content) => {
+        //send the form to d server
 
-          let blogObj = {
-            title,
-            banner,
-            des,
-            tags,
-            content,
-            draft: true, //if draft is true, database will consider it as publishing
-          };
-          axios
-            .post(
-              import.meta.env.VITE_SERVER_DOMAIN + '/create-blog',
-              blogObj,
-              {
-                headers: {
-                  //only authorised user can post
-                  Authorization: `Bearer ${access_token}`,
-                },
-              }
-            )
-            .then(() => {
-              //remove the disable class if it resolve
-              e.target.classList.remove('disable');
-              toast.dismiss(loadingToast);
-              toast.success('Saved');
+        let blogObj = {
+          title,
+          banner,
+          des,
+          tags,
+          content,
+          draft: true, //if draft is true, database will consider it as publishing
+        };
+        axios
+          .post(
+            import.meta.env.VITE_SERVER_DOMAIN + '/create-blog',
+            { ...blogObj, id: blog_id },
+            {
+              headers: {
+                //only authorised user can post
+                Authorization: `Bearer ${access_token}`,
+              },
+            }
+          )
+          .then(() => {
+            //remove the disable class if it resolve
+            e.target.classList.remove('disable');
+            toast.dismiss(loadingToast);
+            toast.success('Saved');
 
-              //wait 500mls before redirecting user to the dashboard
-              setTimeout(() => {
-                navigate('/');
-              }, 500);
-            })
-            .catch(({ response }) => {
-              // im destructuring default data which is d response, before having access to the data
-              //NB axios uses response to catch error
-              //if getting error catch it
-              e.target.classList.remove('disable');
-              toast.dismiss(loadingToast);
+            //wait 500mls before redirecting user to the dashboard
+            setTimeout(() => {
+              navigate('/');
+            }, 500);
+          })
+          .catch(({ response }) => {
+            // im destructuring default data which is d response, before having access to the data
+            //NB axios uses response to catch error
+            //if getting error catch it
+            e.target.classList.remove('disable');
+            toast.dismiss(loadingToast);
 
-              //this will toast whatever error we have from the backend
-              return toast.error(response.data.error);
-            });
-        })
-        .catch((response) => {
-          return toast.error(response.data.error);
-        });
+            //this will toast whatever error we have from the backend
+            return toast.error(response.data.error);
+          });
+      });
+      // .catch(({ response }) => {
+      //   return toast.error(response.data.error);
+      // });
     }
   };
   return (

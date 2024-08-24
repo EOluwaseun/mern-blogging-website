@@ -7,6 +7,7 @@ import { getDay } from '../common/date';
 import BlogInteraction from '../components/blog-interaction.component';
 import BlogPostCard from '../components/blog-post.component';
 import BlogContent from '../components/blog-content.component';
+import CommentContainer from '../components/comment-card.component';
 
 export const blogStructure = {
   title: '',
@@ -29,6 +30,9 @@ const BlogPage = () => {
   const [blog, setBlog] = useState(blogStructure);
   const [similarBlog, setSimilarBlogs] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLikedByUser, setIsLikedByUser] = useState(false);
+  const [commentWrapper, setCommentWrapper] = useState(false);
+  const [totalParentCommentLoaded, setTotalParentCommentLoaded] = useState(0);
 
   let {
     title,
@@ -50,7 +54,7 @@ const BlogPage = () => {
       .post(import.meta.env.VITE_SERVER_DOMAIN + '/get-blog', { blog_id }) //blog ID is sent to d backend
       .then(({ data: { blog } }) => {
         setBlog(blog);
-        console.log(blog.content);
+        // console.log(blog.content);
 
         // FETCHING SIMILAR BLOGS before getting the blogs
         axios
@@ -58,7 +62,7 @@ const BlogPage = () => {
             //it is getting first tag of the blog, and then select any tag that correlate with it
             tag: blog.tags[0],
             limit: 6,
-            eliminate_blog: blog_id, //this remove the current blog
+            eliminate_blog: blog_id, //this remove the current blog from similar
           })
           //sending the first tag of this blog
           .then(({ data }) => {
@@ -86,6 +90,9 @@ const BlogPage = () => {
     setBlog(blogStructure);
     setSimilarBlogs(null);
     setLoading(true);
+    setIsLikedByUser(false);
+    setCommentWrapper(false);
+    setTotalParentCommentLoaded(0);
   };
 
   return (
@@ -93,7 +100,19 @@ const BlogPage = () => {
       {loading ? (
         <Loader />
       ) : (
-        <BlogContext.Provider value={{ blog, setBlog }}>
+        <BlogContext.Provider
+          value={{
+            blog,
+            setBlog,
+            isLikedByUser,
+            setIsLikedByUser,
+            commentWrapper,
+            setCommentWrapper,
+            totalParentCommentLoaded,
+            setTotalParentCommentLoaded,
+          }}
+        >
+          <CommentContainer />
           <div className="max-w-[900px] center py-10 max-lg:px-[5vw]">
             <img src={banner} className="aspect-video" />
             <div className="mt-12">
@@ -121,7 +140,7 @@ const BlogPage = () => {
             <BlogInteraction />
 
             <div className="my-12 font-gelasio blog-page-content">
-              {content[0].blocks.map((block, i) => {
+              {content[0]?.blocks?.map((block, i) => {
                 return (
                   <div key={i} className="my-4 md:my-8">
                     <BlogContent block={block} />
