@@ -679,12 +679,13 @@ server.post('/add-comment', verifyJWT, (req, res) => {
 
   commentObj.save().then((commentFile) => {
     // commentfile referencing to d data saved in d database
+    //these four are extracted from the comment file saving d neccesary
     let { comment, commentedAt, children } = commentFile;
 
     Blog.findOneAndUpdate(
       { _id },
       {
-        //push d coment id into d comment Array
+        //push d comment id into d comments Array
         $push: { comments: commentFile._id },
         $inc: {
           'activity.total_comments': 1,
@@ -715,6 +716,32 @@ server.post('/add-comment', verifyJWT, (req, res) => {
       children,
     });
   });
+});
+
+server.post('/get-blog-comments', (req, res) => {
+  let { blog_id, skip } = req.body;
+
+  let maxLimit = 5;
+
+  //only get if reply is false, meaning it is a parent comment not reply
+  Comment.find({ blog_id, isReply: false }) //it shudn't be a reply but a parent comment
+    .populate(
+      'commented_by',
+      'personal_info.username personal_info.fullname personal_info.profile_img'
+    )
+    .skip(skip)
+    .limit(maxLimit)
+    .sort({
+      commentedAt: -1,
+    })
+    .then((comment) => {
+      // console.log(comment, blog_id, skip);
+      return res.status(200).json(comment);
+    })
+    .catch((err) => {
+      console.log(err.message);
+      return res.status(500).json({ error: err.message });
+    });
 });
 
 server.listen(PORT, () => {

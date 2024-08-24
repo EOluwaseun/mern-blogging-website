@@ -50,12 +50,16 @@ const CommentField = ({ action }) => {
         // console.log(data);
         // render componet card
         setComment('');
+
         data.commented_by = {
+          //passing user details from d frontend
           personal_info: { username, profile_img, fullname }, //sending d user details to d backend
         };
 
         let newCommentArray;
 
+        //HOW IS CHILDREN LEVEL CREATED
+        //childrenLeve is also pass through from d frontend
         data.childrenLevel = 0; //if children level is zero, that means it is a parent comment, else it is reply
         //if children is 1 = it means is a first reply to d parent comment
         //if children is 2 = it means is a second reply to d parent comment
@@ -64,6 +68,7 @@ const CommentField = ({ action }) => {
 
         let parentCommentIncrementval = 1; // it means i'm commenting to update d parent state value of the comment
 
+        //UPDATE THE COMMENTS INTO YOUR BLOG
         setBlog({
           ...blog,
           comments: { ...comments, results: newCommentArray },
@@ -77,7 +82,9 @@ const CommentField = ({ action }) => {
         }); //comments is destructure from d blog so as to update it
         //PARENT COMMENT was used to update d blog
 
+        //total parent Loaded is a state, which was initially 0
         setTotalParentCommentLoaded(
+          //if total parent comment is 1, it will be set in setTotalParentComment, and so on ...
           (preVal) => preVal + parentCommentIncrementval
         );
         //add 1 to previous value

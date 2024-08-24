@@ -1,17 +1,59 @@
 import { useContext } from 'react';
 import { BlogContext } from '../pages/blog.page';
 import CommentField from './comment-field.component';
+import axios from 'axios';
+import NoStateMessage from './nodata.component';
+import AnimationWrapper from '../common/page-animation';
+import CommentCard from './comments.component';
 
 //fetching comment
-// expor
+//this function will be called, immidiately the blog is loaded
+export const fetchComments = async ({
+  blog_id,
+  setParentCountFunc,
+  skip = 0,
+  comment_arr = null,
+}) => {
+  let res;
+
+  await axios
+    .post(import.meta.env.VITE_SERVER_DOMAIN + '/get-blog-comments', {
+      blog_id,
+      skip,
+    })
+    .then(({ data }) => {
+      // console.log(data);
+      data.map((comment) => {
+        //map d comment and pass childrenLevel = 0 to it
+        comment.childrenLevel = 0; //get the parent comment
+      });
+
+      setParentCountFunc((preVal) => preVal + data.length);
+
+      if (comment_arr === null) {
+        //if no comment is made, leave d comment section as it is
+        res = { results: data };
+      } else {
+        //if there is additional comment, destructure and add more comment
+        res = { results: [...comment_arr, ...data] };
+      }
+    });
+
+  return res;
+};
 
 const CommentContainer = () => {
   let {
     blog,
-    blog: { title },
+    blog: {
+      title,
+      comments: { results: commentsArr },
+    },
     commentWrapper,
     setCommentWrapper,
   } = useContext(BlogContext);
+
+  // console.log(commentsArr);
   return (
     <div
       className={`max-sm:w-full fixed ${
@@ -33,6 +75,19 @@ const CommentContainer = () => {
       <hr className="border-grey my-8 w-[120%] -ml-10" />
 
       <CommentField action={'Comment'} />
+
+      {/* render comment */}
+      {commentsArr && commentsArr.length ? (
+        commentsArr.map((comment, i) => {
+          return (
+            <AnimationWrapper key={i}>
+              <CommentCard />
+            </AnimationWrapper>
+          );
+        })
+      ) : (
+        <NoStateMessage message={'No Comment'} />
+      )}
     </div>
   );
 };

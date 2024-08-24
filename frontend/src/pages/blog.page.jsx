@@ -7,7 +7,9 @@ import { getDay } from '../common/date';
 import BlogInteraction from '../components/blog-interaction.component';
 import BlogPostCard from '../components/blog-post.component';
 import BlogContent from '../components/blog-content.component';
-import CommentContainer from '../components/comment-card.component';
+import CommentContainer, {
+  fetchComments,
+} from '../components/comment-card.component';
 
 export const blogStructure = {
   title: '',
@@ -36,7 +38,7 @@ const BlogPage = () => {
 
   let {
     title,
-    des,
+    // des,
     // tags,
     banner,
     content,
@@ -50,11 +52,22 @@ const BlogPage = () => {
 
   //this function fetches single blog from d backend
   const fetchBlog = () => {
+    //This get blog
     axios
       .post(import.meta.env.VITE_SERVER_DOMAIN + '/get-blog', { blog_id }) //blog ID is sent to d backend
-      .then(({ data: { blog } }) => {
+      .then(async ({ data: { blog } }) => {
+        // console.log(blog);
+        // fetch d comment
+
+        //this get blogs comments only, it is then pass to the blog's comment
+        blog.comments = await fetchComments({
+          //comment api fetch is passed to the blog.comments
+          blog_id: blog._id,
+          setParentCountFunc: setTotalParentCommentLoaded,
+        });
+        // setTotalParentCommentLoaded is 0 initially until comment is made
+        // console.llog
         setBlog(blog);
-        // console.log(blog.content);
 
         // FETCHING SIMILAR BLOGS before getting the blogs
         axios
