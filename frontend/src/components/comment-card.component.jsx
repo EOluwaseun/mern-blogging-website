@@ -46,14 +46,34 @@ const CommentContainer = () => {
   let {
     blog,
     blog: {
+      _id,
       title,
       comments: { results: commentsArr },
+      activity,
+      activity: { total_parent_comments }, //total comment in d database
     },
+    setBlog,
     commentWrapper,
     setCommentWrapper,
+    totalParentCommentLoaded,
+    setTotalParentCommentLoaded,
   } = useContext(BlogContext);
 
   // console.log(commentsArr);
+
+  const loadMoreFunc = async () => {
+    //this will create new comment array to load more
+    let newCommentsArray = await fetchComments({
+      skip: totalParentCommentLoaded, //comment that is loaded
+      blog_id: _id,
+      setParentCountFunc: setTotalParentCommentLoaded,
+      comment_arr: commentsArr,
+    });
+
+    //update it in the UI
+    setBlog({ ...blog, comments: newCommentsArray });
+  };
+
   return (
     <div
       className={`max-sm:w-full fixed ${
@@ -81,12 +101,27 @@ const CommentContainer = () => {
         commentsArr.map((comment, i) => {
           return (
             <AnimationWrapper key={i}>
-              <CommentCard />
+              <CommentCard
+                index={i}
+                leftVal={comment.childrenLevel * 4}
+                commentData={comment}
+              />
             </AnimationWrapper>
           );
         })
       ) : (
         <NoStateMessage message={'No Comment'} />
+      )}
+
+      {total_parent_comments > totalParentCommentLoaded ? (
+        <button
+          onClick={loadMoreFunc}
+          className="text-dark-grey p-2 px-3 hover:bg-grey/30 rounded-md flex items-center gap-2"
+        >
+          Load More
+        </button>
+      ) : (
+        ''
       )}
     </div>
   );

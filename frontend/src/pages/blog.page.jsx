@@ -104,7 +104,7 @@ const BlogPage = () => {
     setSimilarBlogs(null);
     setLoading(true);
     setIsLikedByUser(false);
-    setCommentWrapper(false);
+    // setCommentWrapper(false);
     setTotalParentCommentLoaded(0);
   };
 

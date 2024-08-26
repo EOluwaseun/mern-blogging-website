@@ -660,7 +660,10 @@ server.post('/isliked-by-user', verifyJWT, (req, res) => {
 server.post('/add-comment', verifyJWT, (req, res) => {
   let user_id = req.user;
 
-  let { _id, comment, replying_to, blog_author } = req.body;
+  let { _id, comment, blog_author, replying_to } = req.body;
+  /*
+  replying_to is destructure to know the ID of the comment
+  */
 
   if (!comment.length) {
     return res
@@ -669,15 +672,22 @@ server.post('/add-comment', verifyJWT, (req, res) => {
   }
 
   //create comment
-  let commentObj = new Comment({
+  let commentObj = {
     blog_id: _id,
     blog_author, //owner of the blog
     comment,
     commented_by: user_id, //this whole d key of d user who commented
     // isReply
-  });
+  };
 
-  commentObj.save().then((commentFile) => {
+  if (replying_to) {
+    /*
+    if i have ID, i will have parent
+    */
+    commentObj.parent = replying_to;
+  }
+
+  new Comment(commentObj).save().then(async (commentFile) => {
     // commentfile referencing to d data saved in d database
     //these four are extracted from the comment file saving d neccesary
     let { comment, commentedAt, children } = commentFile;
@@ -689,22 +699,38 @@ server.post('/add-comment', verifyJWT, (req, res) => {
         $push: { comments: commentFile._id },
         $inc: {
           'activity.total_comments': 1,
-          'activity.total_parent_comments': 1,
+          'activity.total_parent_comments': replying_to ? 0 : 1,
         },
       }
     ).then((blog) => {
       console.log('New comment created');
     });
 
-    let notification = {
-      type: 'comment',
+    let notificationObj = {
+      type: replying_to ? 'reply' : 'comment',
       blog: _id,
       notification_for: blog_author,
       user: user_id,
       comment: commentFile._id,
     };
 
-    new Notification(notification).save().then((notification) => {
+    if (replying_to) {
+      notificationObj.replied_on_comment = replying_to; // the comment i'm replying to
+
+      await Comment.findOneAndUpdate(
+        { _id: replying_to },
+        { $push: { children: commentFile._id } }
+        //children array contains all of the reply
+        //comentFile._id is gtting added to the children cos it's a reply
+      ).then((replyingToCommentDoc) => {
+        notificationObj.notification_for = replyingToCommentDoc.commented_by;
+      });
+      /*
+      _id of the comment document will equal to d comment ID
+      */
+    }
+
+    new Notification(notificationObj).save().then((notification) => {
       console.log('new notification created');
     });
 
@@ -743,6 +769,8 @@ server.post('/get-blog-comments', (req, res) => {
       return res.status(500).json({ error: err.message });
     });
 });
+
+// server.post()
 
 server.listen(PORT, () => {
   console.log('server connected');
