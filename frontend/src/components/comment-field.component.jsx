@@ -105,7 +105,6 @@ const CommentField = ({
           data.childrenLevel = 0; //if children level is zero, that means it is a parent comment, else it is reply
           //if children is 1 = it means is a first reply to d parent comment
           //if children is 2 = it means is a second reply to d parent comment
-
           //this update new comment, and destructure d ones
           newCommentArray = [data, ...commentArr]; //whatever d comment is data will b d first comment... PARENT COMMENT
         }

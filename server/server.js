@@ -23,6 +23,7 @@ import { cloudinaryUpload } from './utils/cloudinary.js';
 // import fs from 'fs';
 // this is firebase server side function
 import { getAuth } from 'firebase-admin/auth';
+import { populate } from 'dotenv';
 
 const server = express();
 let PORT = 5000;
@@ -685,6 +686,7 @@ server.post('/add-comment', verifyJWT, (req, res) => {
     if i have ID, i will have parent
     */
     commentObj.parent = replying_to;
+    commentObj.isReply = true; //this will make sure the reply is not render as the parent comment
   }
 
   new Comment(commentObj).save().then(async (commentFile) => {
@@ -725,6 +727,7 @@ server.post('/add-comment', verifyJWT, (req, res) => {
       ).then((replyingToCommentDoc) => {
         notificationObj.notification_for = replyingToCommentDoc.commented_by;
       });
+
       /*
       _id of the comment document will equal to d comment ID
       */
@@ -770,7 +773,108 @@ server.post('/get-blog-comments', (req, res) => {
     });
 });
 
-// server.post()
+server.post('/get-replies', (req, res) => {
+  let { _id, skip } = req.body;
+
+  let maxLimit = 5;
+
+  // get the parent commet i want to get d replies
+  Comment.findOne({ _id }) //this will find replies for this comment ID
+    //find d comment and populate d children array
+    .populate({
+      path: 'children',
+      options: {
+        limit: maxLimit,
+        skip: skip,
+        sort: { commentedAt: -1 },
+      },
+      populate: {
+        //this is populating all d data of the children array
+        path: 'commented_by',
+        select:
+          'personal_info.profile_img personal_info.fullname personal_info.username',
+      },
+      select: '-blog_id -updatedAt',
+    })
+    .select('children')
+    .then((doc) => {
+      return res.status(200).json({ replies: doc.children });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+const deleteComments = (_id) => {
+  Comment.findOneAndDelete({ _id })
+    .then((comment) => {
+      // delete d comment
+      // check if the comment has a parent key
+      //this means it's a reply if it has a parent
+      if (comment.parent) {
+        //find d comment parent and pull it's children
+        Comment.findOneAndUpdate(
+          { _id: comment.parent },
+          { $pull: { children: _id } }
+        ).then((data) => console.log('comment deleted from parent'));
+      }
+
+      //DELETE THE COMMENT FROM NOTIFICATION TOO
+      Notification.findOneAndDelete({ comment: _id }).then((notification) =>
+        console.log('comment notification deleted')
+      );
+
+      //DELETE THE REPLY FROM NOTIFICATION TOO
+      Notification.findOneAndDelete({ reply: _id }).then((notification) =>
+        console.log('comment notification deleted')
+      );
+
+      //DELETE THE COMMENT FROM THE BLOG
+      Blog.findOneAndUpdate(
+        { _id: comment.blog_id }, //this refernce to the parent comment
+        {
+          $pull: { comments: _id },
+          $inc: { 'activity.total_comments': -1 }, //remove 1
+          'activity.total_parent_comments': comment.parent ? 0 : -1,
+          //if i'm removing d parent Comment, there is no point in removing 1 from total_parent_comment cos it won't count again
+        }
+        //comment.parent ? 0 : -1   if the comment has a parent meaning it is reply i won't remove anythin from d parent comment
+        // if it is a Comment, i will remove 1 from the total_parent_comment
+      ).then((blog) => {
+        if (comment.children.length) {
+          //this comment is making reference to d comment i am deleting
+          //if comment has some replies
+          comment.children.map((replies) => {
+            deleteComments(replies);
+          }); //loop those replies and called the function again
+          //if there is no reply, this function wont call itself
+        }
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
+
+server.post('/delete-comment', verifyJWT, (req, res) => {
+  let user_id = req.user; //get user who's deleting
+
+  let { _id } = req.body;
+
+  Comment.findOne({ _id }).then((comment) => {
+    //find d comment i want to delete
+    // console.log(comment.commented_by);
+    // console.log(user_id);
+    if (user_id == comment.commented_by || user_id == comment.blog_author) {
+      //run this function if user log in user or d commented user
+      deleteComments(_id); //this check all loops and nested loops
+
+      return res.status(200).json({ status: 'done' });
+    } else {
+      return res.status(403).json({ error: 'You can not delete this comment' });
+    }
+  });
+});
 
 server.listen(PORT, () => {
   console.log('server connected');

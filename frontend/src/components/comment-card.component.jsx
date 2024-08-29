@@ -7,7 +7,7 @@ import AnimationWrapper from '../common/page-animation';
 import CommentCard from './comments.component';
 
 //fetching comment
-//this function will be called, immidiately the blog is loaded
+//this function will be called, immidiately the blog s loaded
 export const fetchComments = async ({
   blog_id,
   setParentCountFunc,
@@ -73,6 +73,8 @@ const CommentContainer = () => {
     //update it in the UI
     setBlog({ ...blog, comments: newCommentsArray });
   };
+
+ 
 
   return (
     <div
