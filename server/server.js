@@ -1,7 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import 'dotenv/config';
-import bycrpt from 'bcrypt';
+import bycrpt, { compare } from 'bcrypt';
 import User from './Schema/User.js';
 import Blog from './Schema/Blog.js';
 import Comment from './Schema/Comment.js';
@@ -23,7 +23,6 @@ import { cloudinaryUpload } from './utils/cloudinary.js';
 // import fs from 'fs';
 // this is firebase server side function
 import { getAuth } from 'firebase-admin/auth';
-import { populate } from 'dotenv';
 
 const server = express();
 let PORT = 5000;
@@ -260,6 +259,74 @@ server.post(
     }
   }
 );
+
+//update password
+server.post('/change-password', verifyJWT, (req, res) => {
+  let { currentPassword, newPassword } = req.body;
+
+  if (
+    !passwordRegex.test(currentPassword) ||
+    !passwordRegex.test(newPassword)
+  ) {
+    return res.status(403).json({
+      error:
+        'Password should be 6 or 20 character long with numeric, 1 lowercase and 1 uppercase letters',
+    });
+  }
+
+  User.findOne({ _id: req.user })
+    .then((user) => {
+      //if user log in with google , you can't change password
+      if (user.google_auth) {
+        return res.status(403).json({
+          error:
+            "You can't change account's password because you logged in with google",
+        });
+      }
+
+      // compare password
+      bycrpt.compare(
+        currentPassword,
+        user.personal_info.password,
+        (err, result) => {
+          if (err) {
+            return res.status(500).json({
+              error:
+                'Some error occurs while changing password, please try again later',
+            });
+          }
+          //if the current password is wrong
+          if (!result) {
+            return res.status(403).json({
+              error: 'Incorrect current password',
+            });
+          }
+
+          //comapare d password and hash it, if current password is correct
+          bycrpt.hash(newPassword, 10, (err, hashed_password) => {
+            User.findOneAndUpdate(
+              { _id: req.user },
+              { 'personal_info.password': hashed_password }
+            )
+              .then((u) => {
+                return res.status(200).json({
+                  status: 'Password changed',
+                });
+              })
+              .catch((err) => {
+                return res.status(403).json({
+                  error: err.message,
+                });
+              });
+          });
+        }
+      );
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).json({ error: 'User not found' });
+    });
+});
 
 // get blog from the database
 

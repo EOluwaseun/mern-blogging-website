@@ -6,12 +6,15 @@ import { useState } from 'react';
 import { lookInSession } from './common/session';
 import Editor from './pages/editor.pages';
 import HomePage from './pages/home.page';
+import EditProfile from './pages/edit-profile.page';
 
 import PublishForm from './components/publish-form.component';
+import SideNav from './components/sidenavbar.component';
 import SearchPage from './pages/search.page';
 import PageNotFound from './pages/404.page';
 import ProfilePage from './pages/profile.page';
 import BlogPage from './pages/blog.page';
+import ChangePassword from './pages/change-password.page';
 
 export const UserContext = createContext({});
 const App = () => {
@@ -35,6 +38,11 @@ const App = () => {
         <Route path="/publish" element={<PublishForm />} />
         <Route path="/" element={<Navbar />}>
           <Route index element={<HomePage />} />
+
+          <Route path="settings" element={<SideNav />}>
+            <Route path="edit-profile" element={<EditProfile />} />
+            <Route path="change-password" element={<ChangePassword />} />
+          </Route>
           <Route path="sign-in" element={<UserAuthForm type={'sign-in'} />} />
           <Route path="sign-up" element={<UserAuthForm type={'sign-up'} />} />
           <Route path="search/:query" element={<SearchPage />} />
