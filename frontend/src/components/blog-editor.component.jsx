@@ -54,7 +54,7 @@ const BlogEditor = () => {
 
   const handleBannerUpload = async (e) => {
     const files = e.target.files;
-    console.log(files);
+    // console.log(files);
     const formData = new FormData();
 
     for (let i = 0; i < files.length; i++) {

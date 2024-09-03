@@ -514,6 +514,84 @@ server.post('/get-profile', (req, res) => {
     });
 });
 
+// update image
+server.post('/update-profile-img', verifyJWT, (req, res) => {
+  let { imageUrl } = req.body;
+
+  User.findOneAndUpdate(
+    { _id: req.user },
+    { 'personal_info.profile_img': imageUrl }
+  )
+    .then(() => {
+      return res.status(200).json({ profile_img: imageUrl });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+//update profile
+server.post('/update-profile', verifyJWT, (req, res) => {
+  let { username, bio, social_links } = req.body;
+
+  let bioLimit = 150;
+
+  if (username.length < 3) {
+    return res
+      .status(403)
+      .json({ error: 'username should be at least 3 letters long' });
+  }
+
+  if (bio.length > bioLimit) {
+    return res
+      .status(403)
+      .json({ error: `Bio should not be more than ${bioLimit} characters` });
+  }
+
+  //this gives array of social links
+  let socialLinkArr = Object.keys(social_links);
+
+  try {
+    for (let i = 0; i < socialLinkArr.length; i++) {
+      if (social_links[socialLinkArr[i]].length) {
+        let hostname = new URL(social_links[socialLinkArr[i]]).hostname;
+
+        if (
+          !hostname.includes(`${socialLinkArr[i]}.com`) &&
+          socialLinkArr[i] != 'website'
+        ) {
+          return res.status(403).json({
+            error: `${socialLinkArr[i]} link is invalid. You must enter a full link`,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    return res.status(500).json({
+      error: 'You must provide full social links with http(s) included',
+    });
+  }
+
+  let updateObj = {
+    'personal_info.username': username,
+    'personal_info.bio': bio,
+    social_links,
+  };
+  User.findOneAndUpdate({ _id: req.user }, updateObj, {
+    runValidators: true,
+  })
+    .then(() => {
+      return res.status(200).json({ username });
+    })
+    .catch((err) => {
+      if (err.code === 11000) {
+        return res.status(409).json({ error: 'username already exist' });
+      }
+      //if it's not duplication error
+      return res.status(500).json({ error: err.message });
+    });
+});
+
 //send form to the backend
 server.post('/create-blog', verifyJWT, (req, res) => {
   let authorId = req.user; // get user id
