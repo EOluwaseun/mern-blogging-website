@@ -707,7 +707,7 @@ server.post('/get-blog', (req, res) => {
   )
     //using findAndUpdate instead of findOne, it's bcos i want to update d likes, comment on the blog
     //$inc this is increament sign in mongoose
-    //it's saying increament d total number of reads pataining to this blog by 1
+    //it's saying increament d total number of reads pataining to Pthis blog by 1
     .populate(
       'author',
       'personal_info.fullname personal_info.username personal_info.profile_img'
@@ -718,13 +718,22 @@ server.post('/get-blog', (req, res) => {
     .then((blog) => {
       //after getting d blog i want to update d reads  from d USER MODEL, thats d reason for populate
       User.findOneAndUpdate(
-        { 'personal_info.username': blog.author.personal_info.username },
+        { 'personal_info.username': blog.author.personal_info.username }, //10 people have read the blog i posted
         { $inc: { 'account_info.total_reads': increamentVal } }
-        // {
-        //   $inc: { 'account_info.total_reads': increamentVal },
-        //   i updated the user's username, and also increament d reads
-        // }
-      );
+      ).catch((err) => {
+        return res.status(500).json({ error: err.message });
+      });
+      // .then((user) => {
+      //   return res.status(200).json(user);
+      // })
+      // .catch((err) => {
+      //   return res
+      //     .status(500)
+      //     .json({ error: 'Failed to update total post number' });
+      // });
+
+      // console.log(blog.author.personal_info.username);
+
       // .catch((err) => {
       //   //catch is used incase i get an error while getting this information from USER MODEL
       //   //so it wont stop my server
@@ -1019,6 +1028,92 @@ server.post('/delete-comment', verifyJWT, (req, res) => {
       return res.status(403).json({ error: 'You can not delete this comment' });
     }
   });
+});
+
+server.get('/new-notification', verifyJWT, (req, res) => {
+  let user_id = req.user;
+
+  Notification.exists({
+    notification_for: user_id,
+    seen: false,
+    user: { $ne: user_id }, //don't include user
+  })
+    .then((result) => {
+      if (result) {
+        return res.status(200).json({ new_notification_available: true });
+      } else {
+        return res.status(200).json({ new_notification_available: false });
+      }
+    })
+    .catch((err) => {
+      console.log(err.message);
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+server.post('/notifications', verifyJWT, (req, res) => {
+  let user_id = req.id; // middleware verifyJWT is setting req.id to longin user_id
+
+  let { page, filter, deletedDocCount } = req.body;
+
+  let maxLimit = 10;
+
+  let findQuery = { notification_for: user_id, user: { $ne: user_id } };
+
+  let skipDocs = (page - 1) * maxLimit;
+
+  if (filter != 'all') {
+    //filter is coming from the frontend
+    findQuery.type = filter; // type is in the notification
+  }
+
+  if (deletedDocCount) {
+    skipDocs -= deletedDocCount;
+    //if any notification is deleted, subtract so as not to mess with d documents
+  }
+
+  Notification.find(findQuery)
+    .skip(skipDocs)
+    .limit(maxLimit)
+    .populate('blog', 'title blog_id') //populate blog key
+    .populate(
+      //populate user key
+      'user',
+      'personal_info.fullname personal_info.username personal_info.profile_img'
+    )
+    .populate('comment', 'comment')
+    .populate('replied_on_comment_', 'comment')
+    .populate('reply', 'comment')
+    .sort({ createdAt: -1 })
+    .select('createdAt type seen reply')
+    .then((notification) => {
+      return res.status.json(200).json({ notification });
+    })
+    .catch((err) => {
+      console.log(err.message);
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+server.post('/all-notifications-count', verifyJWT, (req, res) => {
+  //what is middleware
+  let user_id = req.user;
+
+  let { filter } = req.body;
+
+  let findQuery = { notification_for: user_id, user: { $ne: user_id } };
+
+  if (filter != 'all') {
+    findQuery.type = filter;
+  }
+
+  Notification.countDocuments(findQuery)
+    .then((count) => {
+      return res.status(200).json({ totalDocs: count });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
 });
 
 server.listen(PORT, () => {

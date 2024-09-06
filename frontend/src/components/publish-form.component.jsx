@@ -4,12 +4,14 @@ import { useContext } from 'react';
 import { EditorContext } from '../pages/editor.pages';
 import Tags from './tags.component';
 import { UserContext } from '../App';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
 const PublishForm = () => {
   let characterLimit = 200;
   let tagLimit = 10;
+
+  let { blog_id } = useParams();
 
   let {
     blogState,
@@ -106,12 +108,16 @@ const PublishForm = () => {
       draft: false,
     };
     axios
-      .post(import.meta.env.VITE_SERVER_DOMAIN + '/create-blog', blogObj, {
-        headers: {
-          //only authorised user can post
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
+      .post(
+        import.meta.env.VITE_SERVER_DOMAIN + '/create-blog',
+        { ...blogObj, id: blog_id },
+        {
+          headers: {
+            //only authorised user can post
+            Authorization: `Bearer ${access_token}`,
+          },
+        }
+      )
       .then(() => {
         //remove the disable class if it resolve
         e.target.classList.remove('disable');

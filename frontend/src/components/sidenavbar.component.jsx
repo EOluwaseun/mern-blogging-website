@@ -4,7 +4,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 
 const SideNav = () => {
   let {
-    userAuth: { access_token },
+    userAuth: { access_token, new_notification_available },
   } = useContext(UserContext);
 
   let page = location.pathname.split('/')[2];
@@ -78,11 +78,18 @@ const SideNav = () => {
               Blogs
             </NavLink>
             <NavLink
-              to="/dashboard/notification"
+              to="/dashboard/notifications"
               onClick={(e) => setPageState(e.target.innerText)}
               className="sidebar-link"
             >
-              <i className="fi fi-rr-bell"></i>
+              <div className="relative">
+                <i className="fi fi-rr-bell"></i>
+                {new_notification_available ? (
+                  <span className="bg-red w-2 h-2 rounded-full absolute z-10 top-0 right-0"></span>
+                ) : (
+                  ''
+                )}
+              </div>
               Notification
             </NavLink>
             <NavLink

@@ -50,7 +50,7 @@ const Editor = () => {
         setLoading(false);
       })
       .catch((err) => {
-        console.log(err);
+        // console.log(err);
         blogState(null);
         setLoading(false);
       });
