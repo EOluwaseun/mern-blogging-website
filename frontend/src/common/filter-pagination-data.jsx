@@ -7,6 +7,7 @@ export const filterPaginationData = async ({
   page,
   countRoute,
   data_to_send = {},
+  user = undefined,
   //data to send is object by default otherwise it be undefine
 }) => {
   /*
@@ -22,6 +23,12 @@ export const filterPaginationData = async ({
   /*data_to_send parameter = you need to send data to the countRoute, in other to count the specific document*/
 
   let obj;
+
+  let headers = {};
+
+  if (user) {
+    headers.headers = { Authorization: `Bearer ${user}` };
+  }
   //it means if the array [] i already have is not null, I.E it has data in it  state != null &&
   //i already have an array and i dont want to make a new array                 !create_new_arr
   //exclamation convert it true
@@ -42,7 +49,11 @@ export const filterPaginationData = async ({
     i will first make a request to database
     */
     await axios
-      .post(import.meta.env.VITE_SERVER_DOMAIN + countRoute, data_to_send)
+      .post(
+        import.meta.env.VITE_SERVER_DOMAIN + countRoute,
+        data_to_send,
+        headers
+      )
       .then(({ data: { totalDocs } }) => {
         obj = { results: data, page: 1, totalDocs };
         /*

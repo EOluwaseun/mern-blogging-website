@@ -24,11 +24,11 @@ const UserAuthForm = ({ type }) => {
     axios
       .post(import.meta.env.VITE_SERVER_DOMAIN + serverRoute, formData)
       .then(({ data }) => {
-        console.log(data);
+        // console.log(data);
         // d key is user which it represent in session storage, while d data we're storing is data
         storeInSession('user', JSON.stringify(data));
         setUserAuth(data);
-        console.log(storeInSession);
+        // console.log(storeInSession);
       })
       .catch(({ response }) => {
         toast.error(response.data.error);

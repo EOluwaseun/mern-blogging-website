@@ -815,7 +815,7 @@ server.post('/isliked-by-user', verifyJWT, (req, res) => {
 server.post('/add-comment', verifyJWT, (req, res) => {
   let user_id = req.user;
 
-  let { _id, comment, blog_author, replying_to } = req.body;
+  let { _id, comment, blog_author, replying_to, notification_id } = req.body;
   /*
   replying_to is destructure to know the ID of the comment
   */
@@ -882,6 +882,15 @@ server.post('/add-comment', verifyJWT, (req, res) => {
         notificationObj.notification_for = replyingToCommentDoc.commented_by;
       });
 
+      if (notification_id) {
+        //notification for reply
+        Notification.findOneAndUpdate(
+          { _id: notification_id },
+          { reply: commentFile }._id
+        ).then((notification) => {
+          console.log('notification updated');
+        });
+      }
       /*
       _id of the comment document will equal to d comment ID
       */
@@ -1052,7 +1061,7 @@ server.get('/new-notification', verifyJWT, (req, res) => {
 });
 
 server.post('/notifications', verifyJWT, (req, res) => {
-  let user_id = req.id; // middleware verifyJWT is setting req.id to longin user_id
+  let user_id = req.user; // middleware verifyJWT is setting req.id to longin user_id
 
   let { page, filter, deletedDocCount } = req.body;
 
@@ -1082,12 +1091,12 @@ server.post('/notifications', verifyJWT, (req, res) => {
       'personal_info.fullname personal_info.username personal_info.profile_img'
     )
     .populate('comment', 'comment')
-    .populate('replied_on_comment_', 'comment')
+    .populate('replied_on_comment', 'comment')
     .populate('reply', 'comment')
     .sort({ createdAt: -1 })
     .select('createdAt type seen reply')
-    .then((notification) => {
-      return res.status.json(200).json({ notification });
+    .then((notifications) => {
+      return res.status(200).json({ notifications });
     })
     .catch((err) => {
       console.log(err.message);

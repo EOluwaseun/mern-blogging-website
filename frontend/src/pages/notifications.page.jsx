@@ -1,7 +1,12 @@
 import axios from 'axios';
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { UserContext } from '../App';
 import { filterPaginationData } from '../common/filter-pagination-data';
+import Loader from '../components/loader.component';
+import AnimationWrapper from '../common/page-animation';
+import NoStateMessage from '../components/nodata.component';
+import NotificationCard from '../components/notification-card.component';
+import LoadMoreDataBtn from '../components/load-more.component';
 
 const Notifications = () => {
   let {
@@ -10,27 +15,48 @@ const Notifications = () => {
   //filter button
 
   const [filter, setFilter] = useState('all');
+  const [notifications, setNotifications] = useState(null);
 
   let filters = ['all', 'like', 'comment', 'reply'];
 
   const fetchNotification = ({ page, deletedDocCount = 0 }) => {
     axios
       .post(
-        import.meta.env.VITE.SERVER_DOMAIN + '/new-notification',
+        import.meta.env.VITE_SERVER_DOMAIN + '/notifications',
         { page, filter, deletedDocCount },
         {
           headers: { Authorization: `Bearer ${access_token}` },
         }
       )
-      .then(({ data: { notifications: data } }) => {
-        let formatedData = filterPaginationData();
+      .then(async ({ data: { notifications: data } }) => {
+        let formatedData = await filterPaginationData({
+          state: notifications,
+          data,
+          page,
+          countRoute: '/all-notifications-count',
+          data_to_send: { filter },
+          user: access_token,
+        });
+        setNotifications(formatedData);
+        console.log(formatedData);
+      })
+      .catch((err) => {
+        console.log(err);
       });
   };
+
+  useEffect(() => {
+    if (access_token) {
+      //call notionfition whenever d page is changed/reload, or filter is change, or access_token is change
+      fetchNotification({ page: 1 });
+    }
+  }, [access_token, filter]);
 
   const handleFilterFunc = (e) => {
     let btn = e.target;
 
     setFilter(btn.textContent);
+    setNotifications(null); //first set to null, then reload by useEffect
   };
 
   return (
@@ -52,6 +78,35 @@ const Notifications = () => {
           );
         })}
       </div>
+      {notifications === null ? (
+        <Loader />
+      ) : (
+        <div>
+          {notifications.results.length ? (
+            notifications.results.map((notification, i) => {
+              return (
+                <AnimationWrapper key={i} transition={{ delay: i * 0.08 }}>
+                  <NotificationCard
+                    data={notification}
+                    index={i}
+                    notificationState={{ notifications, setNotifications }}
+                  />
+                </AnimationWrapper>
+              );
+            })
+          ) : (
+            <NoStateMessage message={'Nothing available'} />
+          )}
+
+          <LoadMoreDataBtn
+            state={notifications}
+            fetchMoreData={fetchNotification}
+            additionalParams={{
+              deletedDocCount: notifications.deletedDocCount,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
