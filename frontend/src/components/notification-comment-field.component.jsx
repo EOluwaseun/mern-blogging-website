@@ -15,9 +15,11 @@ const NotificationCommentField = ({
   let [comment, setComment] = useState('');
 
   let { _id: user_id } = blog_author;
+
   let {
     userAuth: { access_token },
   } = useContext(UserContext);
+
   let {
     notifications,
     notifications: { results },
@@ -52,7 +54,6 @@ const NotificationCommentField = ({
       )
       .then(({ data }) => {
         setRelying(false);
-
         results[index].reply = { comment, _id: data._id };
         setNotifications({ ...notifications, results });
       })
@@ -67,7 +68,7 @@ const NotificationCommentField = ({
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)} //get value from d text area
-        placeholder="Leave a comment..."
+        placeholder="Leave a reply..."
         className="input-box pl-5 placeholder:text-dark-grey resize-none h-[150px] overflow-auto"
       ></textarea>
       <button onClick={handleComment} className="btn-dark mt-5 px-10">

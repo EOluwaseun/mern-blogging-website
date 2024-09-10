@@ -15,7 +15,8 @@ const InpageNavigation = ({
   activeTabRef = useRef();
 
   //first page must b active
-  let [inPageNavIndex, setInPageNavIndex] = useState(defaultActiveTabIndex);
+  let [inPageNavIndex, setInPageNavIndex] = useState(null);
+  // let [inPageNavIndex, setInPageNavIndex] = useState(defaultActiveTabIndex);
 
   const changePageState = (btn, i) => {
     //destructure d actual width of the button, every HTML element has this offsetwidth

@@ -10,6 +10,7 @@ const NotificationCard = ({ data, index, notificationState }) => {
 
   let {
     type,
+    seen,
     reply,
     replied_on_comment,
     comment,
@@ -18,7 +19,8 @@ const NotificationCard = ({ data, index, notificationState }) => {
     user: {
       personal_info: { profile_img, fullname, username },
     },
-    blog: { _id, blog_id, title, _id: notification_id },
+    blog: { _id, blog_id, title },
+    _id: notification_id,
   } = data;
 
   let {
@@ -38,7 +40,7 @@ const NotificationCard = ({ data, index, notificationState }) => {
     setReplying((preVal) => !preVal);
   };
 
-  const handleDelete = ({ comment_id, type, target }) => {
+  const handleDelete = (comment_id, type, target) => {
     target.setAttribute('disabled', true);
 
     axios
@@ -73,7 +75,11 @@ const NotificationCard = ({ data, index, notificationState }) => {
   };
 
   return (
-    <div className="p-6 border-b border-grey border-l-black">
+    <div
+      className={`p-6 border-b border-grey border-l-black ${
+        !seen ? 'border-l-2' : ''
+      }`}
+    >
       <div className="flex gap-5 mb-3">
         <img src={profile_img} className="w-14 h-14 flex-none rounded-full" />
         <div className="w-full">
@@ -174,7 +180,6 @@ const NotificationCard = ({ data, index, notificationState }) => {
                   @{author_username}
                 </Link>
                 <span className="font-normal">replied to</span>
-
                 <Link
                   to={`/user/${username}`}
                   className="mx-1 text-black underline"
@@ -188,7 +193,7 @@ const NotificationCard = ({ data, index, notificationState }) => {
 
           <button
             className="underline hover:text-black mt-2 ml-14"
-            onClick={(e) => handleDelete(comment._id, 'reply', e.target)}
+            onClick={(e) => handleDelete(reply._id, 'reply', e.target)}
           >
             Delete
           </button>

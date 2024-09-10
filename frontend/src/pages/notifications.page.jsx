@@ -10,7 +10,9 @@ import LoadMoreDataBtn from '../components/load-more.component';
 
 const Notifications = () => {
   let {
-    userAuth: { access_token },
+    userAuth,
+    userAuth: { access_token, new_notification_available },
+    setUserAuth,
   } = useContext(UserContext);
   //filter button
 
@@ -29,6 +31,9 @@ const Notifications = () => {
         }
       )
       .then(async ({ data: { notifications: data } }) => {
+        if (new_notification_available) {
+          setUserAuth({ ...userAuth, new_notification_available: false });
+        }
         let formatedData = await filterPaginationData({
           state: notifications,
           data,
@@ -38,7 +43,7 @@ const Notifications = () => {
           user: access_token,
         });
         setNotifications(formatedData);
-        console.log(formatedData);
+        // console.log(formatedData);
       })
       .catch((err) => {
         console.log(err);
