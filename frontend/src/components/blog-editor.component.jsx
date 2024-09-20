@@ -1,14 +1,16 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import logo from '../imgs/logo.png';
+import lightLogo from '../imgs/logo-light.png';
+import darkLogo from '../imgs/logo-dark.png';
 import AnimationWrapper from '../common/page-animation';
-import defaultBanner from '../imgs/banner.png';
+import darkBanner from '../imgs/blog-banner-dark.png';
+import lightBanner from '../imgs/banner.png';
 import { useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { EditorContext } from '../pages/editor.pages';
 import EditorJS from '@editorjs/editorjs';
 import { tools } from './tools.component';
-import { UserContext } from '../App';
+import { ThemeContext, UserContext } from '../App';
 
 const BlogEditor = () => {
   // blog context
@@ -27,6 +29,8 @@ const BlogEditor = () => {
   let {
     userAuth: { access_token },
   } = useContext(UserContext);
+
+  let { theme } = useContext(ThemeContext);
 
   let { blog_id } = useParams();
 
@@ -122,7 +126,7 @@ const BlogEditor = () => {
 
   const handleError = (e) => {
     let img = e.target;
-    img.src = defaultBanner;
+    img.src = theme === 'light' ? lightBanner : darkBanner;
   };
 
   //publish
@@ -196,7 +200,7 @@ const BlogEditor = () => {
 
             //wait 500mls before redirecting user to the dashboard
             setTimeout(() => {
-              navigate('/');
+              navigate(`/dashboard/blogs?tab=draft`);
             }, 500);
           })
           .catch(({ response }) => {
@@ -219,7 +223,11 @@ const BlogEditor = () => {
     <>
       <nav className="navbar">
         <Link to={'/'}>
-          <img src={logo} alt="logo" className="flex-none w-10" />
+          <img
+            src={theme === 'light' ? darkLogo : lightLogo}
+            alt="logo"
+            className="flex-none w-10"
+          />
         </Link>
         {/* line clapm wont break the word, it will only add 3 dots if the world will overflow */}
         <p className="max-md:hidden text-black line-clamp-1 w-full">
@@ -265,7 +273,7 @@ const BlogEditor = () => {
               defaultValue={blogState?.title}
               placeholder="Blog Title"
               className="text-4xl font-medium w-full h-20 outline-none resize-none
-              mt-10 leading-tight placeholder:opacity-40"
+              mt-10 leading-tight placeholder:opacity-40 bg-white"
               onKeyDown={handleTitleKeydown}
               onChange={handleTitleChange}
             ></textarea>

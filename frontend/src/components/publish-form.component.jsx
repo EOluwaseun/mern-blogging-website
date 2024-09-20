@@ -126,7 +126,7 @@ const PublishForm = () => {
 
         //wait 500mls before redirecting user to the dashboard
         setTimeout(() => {
-          navigate('/');
+          navigate('/dashboard/blogs');
         }, 500);
       })
       .catch(({ response }) => {

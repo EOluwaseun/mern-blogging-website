@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { getDay } from '../common/date';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
+import axios from 'axios';
+import { UserContext } from '../App';
 
 const BlogStat = ({ stat }) => {
   return (
@@ -29,10 +31,15 @@ const BlogStat = ({ stat }) => {
 
 export const ManageBlogCard = ({ blog }) => {
   let { banner, blog_id, title, publishedAt, activity } = blog;
+  let {
+    userAuth,
+    userAuth: { access_token },
+    setUserAuth,
+  } = useContext(UserContext);
 
   let [showStat, setShowStat] = useState(false);
 
-  console.log(showStat);
+  // console.log(showStat);
 
   return (
     <>
@@ -61,7 +68,12 @@ export const ManageBlogCard = ({ blog }) => {
             >
               Stats
             </button>
-            <button className="pr-4 py-2 underline text-red">Delete</button>
+            <button
+              className="pr-4 py-2 underline text-red"
+              onClick={(e) => deleteBlog(blog, access_token, e.target)}
+            >
+              Delete
+            </button>
           </div>
         </div>
         <div className="max-lg:hidden">
@@ -79,8 +91,15 @@ export const ManageBlogCard = ({ blog }) => {
   );
 };
 
-export const ManageDraftPost = ({ blog, index }) => {
-  let { title, des, blog_id } = blog;
+export const ManageDraftPost = ({ blog }) => {
+  let { title, des, blog_id, index } = blog;
+  let {
+    userAuth,
+    userAuth: { access_token },
+    setUserAuth,
+  } = useContext(UserContext);
+  index++;
+
   return (
     <div className="flex gap-5 lg:gap-10 pb-6 border-b mb-6 border-grey">
       <h1 className="blog-index text-center pl-4 md:pl-6 flex-none">
@@ -94,9 +113,62 @@ export const ManageDraftPost = ({ blog, index }) => {
           <Link to={`/editor/${blog_id}`} className="pr-4 py-2 underline">
             Edit
           </Link>
-          <button className="pr-4 py-2 underline text-red">Delete</button>
+          <button
+            onClick={(e) => deleteBlog(blog, access_token, e.target)}
+            className="pr-4 py-2 underline text-red"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>
   );
+};
+
+const deleteBlog = (blog, access_token, target) => {
+  let { index, blog_id, setStateFunc } = blog;
+
+  target.setAttribute('disabled', true);
+
+  axios
+    .post(
+      import.meta.env.VITE_SERVER_DOMAIN + '/delete-blog',
+      {
+        blog_id,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      }
+    )
+    .then(({ data }) => {
+      target.removeAttribute('disabled');
+      setStateFunc((preVal) => {
+        let { deletedDocCount, totalDocs, results } = preVal;
+
+        results.splice(index, 1);
+
+        if (!results.length && totalDocs - 1 > 0) {
+          return null;
+        }
+
+        if (!deletedDocCount) {
+          deletedDocCount = 0;
+        }
+        console.log({
+          ...preVal,
+          totalDocs: totalDocs - 1,
+          deletedDocCount: deletedDocCount + 1,
+        });
+        return {
+          ...preVal,
+          totalDocs: totalDocs - 1,
+          deletedDocCount: deletedDocCount + 1,
+        };
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+    });
 };

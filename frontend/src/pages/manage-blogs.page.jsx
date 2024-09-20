@@ -11,11 +11,15 @@ import {
   ManageBlogCard,
   ManageDraftPost,
 } from '../components/manage-blogcard.component';
+import LoadMoreDataBtn from '../components/load-more.component';
+import { useSearchParams } from 'react-router-dom';
 
 const ManageBlogs = () => {
   const [blogs, setBlogs] = useState(null);
   const [drafts, setDrafts] = useState(null);
   const [query, setQuery] = useState('');
+
+  let activeTab = useSearchParams()[0].get('tab');
 
   let {
     userAuth,
@@ -102,7 +106,10 @@ const ManageBlogs = () => {
         />
         <i className="fi fi-rr-search absolute right-[10%] md:pointer-events-none md:left-5 top-1/2 -translate-y-1/2 text-xl text-dark-grey"></i>
       </div>
-      <InpageNavigation routes={['Published Blogs', 'Drafts']}>
+      <InpageNavigation
+        routes={['Published Blogs', 'Drafts']}
+        defaultActiveTabIndex={activeTab != 'draft' ? 0 : 1}
+      >
         {blogs === null ? (
           <Loader />
         ) : blogs.results.length ? (
@@ -110,10 +117,21 @@ const ManageBlogs = () => {
             {blogs.results.map((blog, i) => {
               return (
                 <AnimationWrapper key={i} transition={{ delay: i * 0.04 }}>
-                  <ManageBlogCard blog={blog} />
+                  <ManageBlogCard
+                    blog={{ ...blog, index: i, setStateFunc: setBlogs }}
+                  />
                 </AnimationWrapper>
               );
             })}
+
+            <LoadMoreDataBtn
+              state={blogs}
+              fetchMoreData={getBlogs}
+              additionalParams={{
+                draft: false,
+                deletedDocCount: blogs.deletedDocCount,
+              }}
+            />
           </>
         ) : (
           <NoStateMessage message="No published blogs" />
@@ -127,10 +145,20 @@ const ManageBlogs = () => {
             {drafts.results.map((blog, i) => {
               return (
                 <AnimationWrapper key={i} transition={{ delay: i * 0.04 }}>
-                  <ManageDraftPost blog={blog} index={i + 1} />
+                  <ManageDraftPost
+                    blog={{ ...blog, index: i, setStateFunc: setDrafts }}
+                  />
                 </AnimationWrapper>
               );
             })}
+            <LoadMoreDataBtn
+              state={drafts}
+              fetchMoreData={getBlogs}
+              additionalParams={{
+                draft: true,
+                deletedDocCount: drafts.deletedDocCount,
+              }}
+            />
           </>
         ) : (
           <NoStateMessage message="No draft blogs" />

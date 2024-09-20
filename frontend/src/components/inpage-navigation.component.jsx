@@ -15,8 +15,10 @@ const InpageNavigation = ({
   activeTabRef = useRef();
 
   //first page must b active
-  let [inPageNavIndex, setInPageNavIndex] = useState(null);
-  // let [inPageNavIndex, setInPageNavIndex] = useState(defaultActiveTabIndex);
+  let [inPageNavIndex, setInPageNavIndex] = useState(defaultActiveTabIndex);
+
+  let [isResizeEventAdded, setIsResizeAdded] = useState(false);
+  let [width, setWidth] = useState(window.innerWidth);
 
   const changePageState = (btn, i) => {
     //destructure d actual width of the button, every HTML element has this offsetwidth
@@ -33,9 +35,22 @@ const InpageNavigation = ({
   };
 
   useEffect(() => {
-    //this effect will only run once, only when the page load
-    changePageState(activeTabRef.current, defaultActiveTabIndex); //d state will be on first index even without clicking it
-  }, []);
+    if (width > 768 && inPageNavIndex != defaultActiveTabIndex) {
+      //this effect will only run once, only when the page load
+      changePageState(activeTabRef.current, defaultActiveTabIndex); //d state will be on first index even without clicking it
+    }
+
+    if (!isResizeEventAdded) {
+      window.addEventListener('resize', () => {
+        if (!isResizeEventAdded) {
+          setIsResizeAdded(true);
+        }
+
+        setWidth(window.innerWidth);
+      });
+    }
+  }, [width]);
+  // console.log(width);
   return (
     <>
       <div className="relative mb-8 bg-white border-b border-grey flex flex-nowrap overflow-x-auto">
@@ -57,7 +72,10 @@ const InpageNavigation = ({
             </button>
           );
         })}
-        <hr ref={activeTabLineRef} className="absolute bottom-0 duration-300" />
+        <hr
+          ref={activeTabLineRef}
+          className="absolute bottom-0 duration-300 border-dark-grey"
+        />
       </div>
       {/*array.isArray check wether element is an array, then it returns true 
       ofcourse, the children here is an array, which means it has more than 1
